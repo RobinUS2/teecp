@@ -56,3 +56,7 @@ Putting it all together
 ```
 go vet . && go fmt . && go test -v . && go build . && ./teecp --device=lo0 --bpf='port 1234' --verbose=true --output-tcp "test.com:123"
 ```
+
+## Used by
+- [Route42](https://route42.nl/)
+- open a PR and add YourCompany!
