@@ -16,6 +16,28 @@ It is built around Google's [gopacket](https://github.com/google/gopacket) libra
 
 < Diagram here >
 
+By default the payload of the packet is forwarded (without the encapsulating layers). 
+It is however possible to forward the entire packet payload without any filters.
+
+## How to run?
+The below will listen on interface `lo0`, filter traffic on port 1234, log 
+all details (very verbose, turn off in production), and copy it's packet payloads 
+(by default TCP & UDP) towards localhost port 8080.
+```
+./teecp --device=lo0 --bpf='port 1234' --verbose=true --output-tcp 'localhost:8080'
+```
+
+The `--bpf` flag can handle [Berkeley Packet Filter](https://en.wikipedia.org/wiki/Berkeley_Packet_Filter) syntax. 
+
+A handful of examples:
+
+| Example                 | Syntax                                         |
+|-------------------------|------------------------------------------------|
+| TCP only                | tcp                                            |
+| TCP for a specific port | tcp port 1234                                  |
+| + specific source       | tcp port 1234 and src 1.2.3.4                  |
+| + specific destination  | tcp port 1234 and src 1.2.3.4 and dst 10.0.0.1 | 
+
 ## Related projects
 - GoReplay HTTP(S) https://github.com/buger/goreplay
 - TCPCopy https://github.com/session-replay-tools/tcpcopy
@@ -23,6 +45,14 @@ It is built around Google's [gopacket](https://github.com/google/gopacket) libra
 - IPTables `iptables -t mangle -A POSTROUTING -p tcp --dport 1234 -j TEE --gateway IP_HOST_B`
 
 ## Build & test
+The application relies upon libpcap and [GoLang](https://golang.org/doc/install). 
+
+OS X
+```
+brew install libpcap
+```
+
+Putting it all together
 ```
 go vet . && go fmt . && go test -v . && go build . && ./teecp --device=lo0 --bpf='port 1234' --verbose=true --output-tcp "test.com:123"
 ```
