@@ -12,6 +12,8 @@ and copies all the individual packets to another location.
 It relies on the promiscuous mode ethernet sniffing mode which is also used by 
 tools like [WireShark](https://www.wireshark.org/), [WinPcap](https://www.winpcap.org/), etc.
 
+It is built around Google's [gopacket](https://github.com/google/gopacket) library and written in GoLang.
+
 < Diagram here >
 
 ## Related projects
