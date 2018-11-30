@@ -9,7 +9,6 @@ var device string
 var bpfFilter string
 var verbose bool
 var layerStr string
-var layers map[int]bool
 
 func init() {
 	flag.StringVar(&device, "device", "", "device")
