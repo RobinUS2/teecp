@@ -12,3 +12,10 @@
 *.out
 .idea
 teecp
+
+# folders
+gopath/*
+lib/*
+include/*
+!.gitignore
+!.gitkeep
