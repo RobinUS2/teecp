@@ -1,10 +1,10 @@
 package main
 
 import (
+	"github.com/pkg/errors"
 	"log"
 	"net"
 	"strings"
-	"sync"
 	"sync/atomic"
 )
 
@@ -40,30 +40,23 @@ func (forwarder *Forwarder) Start() {
 
 type ForwarderInstance struct {
 	forwarder *Forwarder
-	conn      *net.TCPConn
-	connMux   sync.RWMutex
 }
 
 func (instance *ForwarderInstance) Conn() *net.TCPConn {
-	instance.connMux.Lock()
-	defer instance.connMux.Unlock()
-	if instance.conn == nil {
-		// resolve
-		tcpAddr, err := net.ResolveTCPAddr("tcp", instance.forwarder.opts.OutputTcp)
-		if err != nil {
-			log.Fatalf("could not resolve target %s", err)
-		}
-		log.Printf("tcpAddr %v", tcpAddr)
-
-		// connect
-		conn, err := net.DialTCP("tcp", nil, tcpAddr)
-		if err != nil {
-			log.Printf("could not resolve target %s", err)
-			return nil
-		}
-		instance.conn = conn
+	// resolve
+	tcpAddr, err := net.ResolveTCPAddr("tcp", instance.forwarder.opts.OutputTcp)
+	if err != nil {
+		log.Fatalf("could not resolve target %s", err)
 	}
-	return instance.conn
+	log.Printf("tcpAddr %v", tcpAddr)
+
+	// connect
+	conn, err := net.DialTCP("tcp", nil, tcpAddr)
+	if err != nil {
+		log.Printf("could not resolve target %s", err)
+		return nil
+	}
+	return conn
 }
 
 func (forwarder *Forwarder) Run() *ForwarderInstance {
@@ -88,6 +81,9 @@ func (forwarder *Forwarder) Run() *ForwarderInstance {
 }
 
 func (forwarder *Forwarder) send(conn *net.TCPConn, payload Payload) error {
+	if conn == nil {
+		return errors.New("no connection")
+	}
 	log.Printf("sending %x", payload.data)
 	n, err := conn.Write(payload.data)
 	if err != nil {
