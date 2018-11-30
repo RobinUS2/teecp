@@ -4,13 +4,17 @@ import (
 	"encoding/json"
 	"github.com/google/gopacket/pcap"
 	"log"
+	"runtime"
 	"strconv"
 	"strings"
 )
 
 type Opts struct {
 	Device        string
+	OutputTcp     string
 	MaxPacketSize int32
+	QueueSize     int
+	NumForwarders int
 
 	layers map[int]bool
 }
@@ -18,12 +22,18 @@ type Opts struct {
 func NewOpts() *Opts {
 	return &Opts{
 		MaxPacketSize: 65536,
+		QueueSize:     1000,
+		NumForwarders: runtime.NumCPU(),
 	}
 }
 
 func (opts *Opts) Print() {
 	j, _ := json.Marshal(opts)
 	log.Printf("config %s", string(j))
+}
+
+func (opts *Opts) Validate() {
+	// @todo check that it's valid configuration
 }
 
 func (opts *Opts) ParseLayers(layerStr string) {

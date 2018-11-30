@@ -21,3 +21,8 @@ It is built around Google's [gopacket](https://github.com/google/gopacket) libra
 - TCPCopy https://github.com/session-replay-tools/tcpcopy
 - Duplicator https://github.com/agnoster/duplicator
 - IPTables `iptables -t mangle -A POSTROUTING -p tcp --dport 1234 -j TEE --gateway IP_HOST_B`
+
+## Build & test
+```
+go vet . && go fmt . && go test -v . && go build . && ./teecp --device=lo0 --bpf='port 1234' --verbose=true --output-tcp "test.com:123"
+```

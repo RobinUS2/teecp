@@ -4,11 +4,19 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
 	"log"
-	"strings"
 )
 
 type RawListener struct {
-	opts *Opts
+	opts      *Opts
+	forwarder *Forwarder
+}
+
+func (listener *RawListener) Forwarder() *Forwarder {
+	return listener.forwarder
+}
+
+func (listener *RawListener) SetForwarder(forwarder *Forwarder) {
+	listener.forwarder = forwarder
 }
 
 func (listener *RawListener) Listen() error {
@@ -29,15 +37,23 @@ func (listener *RawListener) handlePacket(packet gopacket.Packet) {
 	if verbose {
 		log.Printf("recv packet %+v", packet) // Do something with a packet here.
 	}
-	for _, layer := range packet.Layers() {
-		if verbose {
-			log.Printf("  layer type=%d payload=%x (%s) content=%x", layer.LayerType(), layer.LayerPayload(), string(layer.LayerPayload()), layer.LayerContents())
+
+	// specific layer?
+	if listener.opts.layers != nil {
+		for _, layer := range packet.Layers() {
+			if verbose {
+				log.Printf("  layer type=%d payload=%x (%s) content=%x", layer.LayerType(), layer.LayerPayload(), string(layer.LayerPayload()), layer.LayerContents())
+			}
+			if listener.opts.layers != nil && !listener.opts.layers[int(layer.LayerType())] {
+				// not in expected layers
+				continue
+			}
+			// just this layer's payload
+			listener.Forwarder().Queue(NewPayload(layer.LayerPayload()))
 		}
-		if listener.opts.layers != nil && !listener.opts.layers[int(layer.LayerType())] {
-			// not in expected layers
-			continue
-		}
-		log.Printf("%s", strings.TrimSpace(string(layer.LayerPayload())))
+	} else {
+		// full packet
+		listener.Forwarder().Queue(NewPayload(packet.Data()))
 	}
 }
 
