@@ -10,6 +10,7 @@ var bpfFilter string
 var verbose bool
 var layerStr string
 var outputTcp string
+var statsPrinter bool
 
 func init() {
 	flag.StringVar(&device, "device", "", "device")
@@ -17,6 +18,7 @@ func init() {
 	flag.StringVar(&layerStr, "layers", "44,45", "layers comma separated - 44 = TCP, 45 = UDP https://github.com/google/gopacket/blob/master/layers/layertypes.go")
 	flag.StringVar(&outputTcp, "output-tcp", "", "TCP output configuration (e.g. your-host:1234")
 	flag.BoolVar(&verbose, "verbose", false, "verbose logging")
+	flag.BoolVar(&statsPrinter, "stats", true, "print stats")
 	flag.Parse()
 }
 
@@ -24,6 +26,7 @@ func main() {
 	opts := NewOpts()
 	opts.Device = device
 	opts.OutputTcp = outputTcp
+	opts.StatsPrinter = statsPrinter
 	opts.ParseLayers(layerStr)
 	opts.AutoDiscover()
 	opts.Print()

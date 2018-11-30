@@ -15,6 +15,7 @@ type Opts struct {
 	MaxPacketSize int32
 	QueueSize     int
 	NumForwarders int
+	StatsPrinter  bool
 
 	layers map[int]bool
 }

@@ -5,12 +5,17 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 type Forwarder struct {
 	opts  *Opts
 	queue chan Payload
 	stop  bool
+
+	packetsForwarded uint64
+	packetsFailed    uint64
+	bytesForwarded   uint64
 }
 
 func (forwarder *Forwarder) Queue(payload Payload) {
@@ -29,6 +34,8 @@ func (forwarder *Forwarder) Start() {
 			forwarder.Run()
 		}()
 	}
+
+	forwarder.printStats()
 }
 
 type ForwarderInstance struct {
@@ -67,7 +74,9 @@ func (forwarder *Forwarder) Run() *ForwarderInstance {
 		payload := <-forwarder.queue
 		err := forwarder.send(instance.Conn(), payload)
 		if err != nil {
+			atomic.AddUint64(&forwarder.packetsFailed, 1)
 			log.Printf("failed to send %s (payload %x)", err, payload.data)
+			continue
 		}
 
 		// stop
@@ -84,6 +93,10 @@ func (forwarder *Forwarder) send(conn *net.TCPConn, payload Payload) error {
 	if err != nil {
 		return err
 	}
+	// stats
+	atomic.AddUint64(&forwarder.bytesForwarded, uint64(n))
+	atomic.AddUint64(&forwarder.packetsForwarded, 1)
+
 	if verbose {
 		log.Printf("sent %d bytes to %s", n, conn.RemoteAddr().String())
 	}
