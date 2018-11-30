@@ -10,7 +10,9 @@ and copies all the individual packets to another location.
 
 ## How does it work?
 It relies on the promiscuous mode ethernet sniffing mode which is also used by 
-tools like [WireShark](https://www.wireshark.org/), [WinPcap](https://www.winpcap.org/), etc.
+tools like [WireShark](https://www.wireshark.org/), 
+[WinPcap](https://www.winpcap.org/), 
+[tcpdump](https://www.tcpdump.org/), etc.
 
 It is built around Google's [gopacket](https://github.com/google/gopacket) library and written in GoLang.
 
@@ -38,12 +40,6 @@ A handful of examples:
 | + specific source       | tcp port 1234 and src 1.2.3.4                  |
 | + specific destination  | tcp port 1234 and src 1.2.3.4 and dst 10.0.0.1 | 
 
-## Related projects
-- GoReplay HTTP(S) https://github.com/buger/goreplay
-- TCPCopy https://github.com/session-replay-tools/tcpcopy
-- Duplicator https://github.com/agnoster/duplicator
-- IPTables `iptables -t mangle -A POSTROUTING -p tcp --dport 1234 -j TEE --gateway IP_HOST_B`
-
 ## Build & test
 The application relies upon libpcap and [GoLang](https://golang.org/doc/install). 
 
@@ -60,3 +56,9 @@ go vet . && go fmt . && go test -v . && go build . && ./teecp --device=lo0 --bpf
 ## Used by
 - [Route42](https://route42.nl/)
 - open a PR and add YourCompany!
+
+## Related projects
+- GoReplay HTTP(S) https://github.com/buger/goreplay
+- TCPCopy https://github.com/session-replay-tools/tcpcopy
+- Duplicator https://github.com/agnoster/duplicator
+- IPTables `iptables -t mangle -A POSTROUTING -p tcp --dport 1234 -j TEE --gateway IP_HOST_B`
