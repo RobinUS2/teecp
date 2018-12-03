@@ -41,7 +41,7 @@ A handful of examples:
 | + specific destination  | tcp port 1234 and src 1.2.3.4 and dst 10.0.0.1 | 
 
 ## Build & test
-The application relies upon libpcap and [GoLang](https://golang.org/doc/install). 
+The application relies upon libpcap (for Windows, [download developer pack](https://www.winpcap.org/devel.htm)) and [GoLang](https://golang.org/doc/install). 
 
 OS X
 ```
