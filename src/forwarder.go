@@ -135,6 +135,13 @@ func (forwarder *Forwarder) send(conn *net.TCPConn, payload Payload) error {
 }
 
 func (instance *ForwarderInstance) handlePayload(payload Payload) {
+	// recover errors
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("recovered error in handlePayload: %s", err)
+		}
+	}()
+
 	// retry support
 	var err error
 	for i := 0; i < instance.forwarder.opts.MaxRetries; i++ {
