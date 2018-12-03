@@ -13,16 +13,19 @@ import (
 const separator = "|"
 const protocolTcp = "tcp"
 const optKeepAlive = "keepalive"
+const DefaultMaxPacketSize = 65536
 
 type Opts struct {
-	Device        string
-	BpfFilter     string
-	Output        string
-	MaxPacketSize int32
-	QueueSize     int
-	NumForwarders int
-	StatsPrinter  bool
-	MaxRetries    int
+	Device                    string
+	BpfFilter                 string
+	Output                    string
+	MaxPacketSize             int32
+	QueueSize                 int
+	NumForwarders             int
+	StatsPrinter              bool
+	StatsIntervalMilliseconds int
+	MaxRetries                int
+	Verbose                   bool
 
 	// output
 	outputProtocol  string
@@ -34,10 +37,11 @@ type Opts struct {
 
 func NewOpts() *Opts {
 	return &Opts{
-		MaxPacketSize: 65536,
-		QueueSize:     1000,
-		MaxRetries:    3,
-		NumForwarders: runtime.NumCPU(),
+		MaxPacketSize:             DefaultMaxPacketSize,
+		StatsIntervalMilliseconds: DefaultStatsIntervalMilliseconds,
+		QueueSize:                 1000,
+		MaxRetries:                3,
+		NumForwarders:             runtime.NumCPU(),
 	}
 }
 

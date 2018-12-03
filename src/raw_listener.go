@@ -20,6 +20,9 @@ func (listener *RawListener) SetForwarder(forwarder *Forwarder) {
 }
 
 func (listener *RawListener) Listen() error {
+	if verbose {
+		log.Printf("start listening at %s", listener.opts.Device)
+	}
 	if handle, err := pcap.OpenLive(listener.opts.Device, listener.opts.MaxPacketSize, true, pcap.BlockForever); err != nil {
 		return err
 	} else if err := handle.SetBPFFilter(listener.opts.BpfFilter); err != nil { // optional
