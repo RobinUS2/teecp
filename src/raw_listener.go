@@ -22,7 +22,7 @@ func (listener *RawListener) SetForwarder(forwarder *Forwarder) {
 func (listener *RawListener) Listen() error {
 	if handle, err := pcap.OpenLive(listener.opts.Device, listener.opts.MaxPacketSize, true, pcap.BlockForever); err != nil {
 		return err
-	} else if err := handle.SetBPFFilter(bpfFilter); err != nil { // optional
+	} else if err := handle.SetBPFFilter(listener.opts.BpfFilter); err != nil { // optional
 		return err
 	} else {
 		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())

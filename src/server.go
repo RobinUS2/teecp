@@ -26,11 +26,15 @@ func main() {
 	opts := NewOpts()
 	opts.Device = device
 	opts.OutputTcp = outputTcp
+	opts.BpfFilter = bpfFilter
 	opts.StatsPrinter = statsPrinter
 	opts.ParseLayers(layerStr)
 	opts.AutoDiscover()
 	opts.Print()
 	opts.Validate()
+
+	// prevent usage of non opts
+	unsetLocal()
 
 	// listener
 	listener := NewRawListener(opts)
@@ -47,4 +51,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to listen %s", err)
 	}
+}
+
+func unsetLocal() {
+	device = ""
+	bpfFilter = ""
+	layerStr = ""
+	outputTcp = ""
 }

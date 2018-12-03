@@ -11,6 +11,7 @@ import (
 
 type Opts struct {
 	Device        string
+	BpfFilter     string
 	OutputTcp     string
 	MaxPacketSize int32
 	QueueSize     int
