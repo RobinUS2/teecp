@@ -13,7 +13,7 @@ func (forwarder *Forwarder) printStats() {
 	ticker := time.NewTicker(10 * time.Second)
 	go func() {
 		for _ = range ticker.C {
-			log.Printf("forwarded %d bytes, %d packets, %d failed packets", atomic.LoadUint64(&forwarder.bytesForwarded), atomic.LoadUint64(&forwarder.packetsForwarded), atomic.LoadUint64(&forwarder.packetsFailed))
+			log.Printf("forwarded %d bytes, %d packets, %d failed attempts, %d failed packets", atomic.LoadUint64(&forwarder.bytesForwarded), atomic.LoadUint64(&forwarder.packetsForwarded), atomic.LoadUint64(&forwarder.packetAttemptsFailed), atomic.LoadUint64(&forwarder.packetsFailed))
 		}
 	}()
 }

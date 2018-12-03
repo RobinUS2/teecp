@@ -22,6 +22,7 @@ type Opts struct {
 	QueueSize     int
 	NumForwarders int
 	StatsPrinter  bool
+	MaxRetries    int
 
 	// output
 	outputProtocol  string
@@ -35,6 +36,7 @@ func NewOpts() *Opts {
 	return &Opts{
 		MaxPacketSize: 65536,
 		QueueSize:     1000,
+		MaxRetries:    3,
 		NumForwarders: runtime.NumCPU(),
 	}
 }

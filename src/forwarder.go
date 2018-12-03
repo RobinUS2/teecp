@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type Forwarder struct {
@@ -14,9 +15,10 @@ type Forwarder struct {
 	queue chan Payload
 	stop  bool
 
-	packetsForwarded uint64
-	packetsFailed    uint64
-	bytesForwarded   uint64
+	packetsForwarded     uint64
+	packetsFailed        uint64
+	packetAttemptsFailed uint64
+	bytesForwarded       uint64
 }
 
 func (forwarder *Forwarder) Queue(payload Payload) {
@@ -93,15 +95,7 @@ func (forwarder *Forwarder) Run() *ForwarderInstance {
 	}
 	for {
 		payload := <-forwarder.queue
-		// @todo retry support
-		err := forwarder.send(instance.Conn(), payload)
-		if err != nil {
-			atomic.AddUint64(&forwarder.packetsFailed, 1)
-			log.Printf("failed to send %s (payload %x)", err, payload.data)
-			// reset connection on error
-			instance.resetConnection()
-			continue
-		}
+		instance.handlePayload(payload)
 
 		// stop
 		if forwarder.stop {
@@ -138,6 +132,36 @@ func (forwarder *Forwarder) send(conn *net.TCPConn, payload Payload) error {
 	}
 
 	return nil
+}
+
+func (instance *ForwarderInstance) handlePayload(payload Payload) {
+	// retry support
+	var err error
+	for i := 0; i < instance.forwarder.opts.MaxRetries; i++ {
+		// attempt
+		err = instance.forwarder.send(instance.Conn(), payload)
+		if err != nil {
+			if verbose {
+				log.Printf("failed attempt to send %s (payload %x)", err, payload.data)
+			}
+			atomic.AddUint64(&instance.forwarder.packetAttemptsFailed, 1)
+
+			// reset connection on error
+			instance.resetConnection()
+
+			// sleep a bit
+			time.Sleep(time.Duration(100+(i*i*1000)) * time.Millisecond)
+
+			// try again
+			continue
+		}
+		break
+	}
+	// fatal, after retries still not sent
+	if err != nil {
+		log.Printf("failed to send %s (payload %x)", err, payload.data)
+		atomic.AddUint64(&instance.forwarder.packetsFailed, 1)
+	}
 }
 
 func (instance *ForwarderInstance) resetConnection() {
