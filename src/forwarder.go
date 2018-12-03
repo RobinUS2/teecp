@@ -43,6 +43,7 @@ type ForwarderInstance struct {
 }
 
 func (instance *ForwarderInstance) Conn() *net.TCPConn {
+	// @todo cache name resolution?
 	// resolve
 	tcpAddr, err := net.ResolveTCPAddr("tcp", instance.forwarder.opts.OutputTcp)
 	if err != nil {
@@ -51,6 +52,7 @@ func (instance *ForwarderInstance) Conn() *net.TCPConn {
 	log.Printf("tcpAddr %v", tcpAddr)
 
 	// connect
+	// @todo option to enable keepalive, reuse conections
 	conn, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
 		log.Printf("could not resolve target %s", err)
@@ -85,6 +87,7 @@ func (forwarder *Forwarder) send(conn *net.TCPConn, payload Payload) error {
 		return errors.New("no connection")
 	}
 	log.Printf("sending %x", payload.data)
+	// @todo option to prefix with length of data => byte bs := make([]byte, 4) binary.LittleEndian.PutUint32(bs, 31415926)
 	n, err := conn.Write(payload.data)
 	if err != nil {
 		return err
