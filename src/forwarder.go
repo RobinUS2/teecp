@@ -63,9 +63,12 @@ func (instance *ForwarderInstance) Conn() *net.TCPConn {
 	// resolve
 	tcpAddr, err := net.ResolveTCPAddr("tcp", instance.forwarder.opts.outputAddress)
 	if err != nil {
-		log.Fatalf("could not resolve target %s", err)
+		log.Printf("could not resolve target %s", err)
+		return nil
 	}
-	log.Printf("tcpAddr %v", tcpAddr)
+	if verbose {
+		log.Printf("tcpAddr %v", tcpAddr)
+	}
 
 	// connect
 	conn, err := net.DialTCP("tcp", nil, tcpAddr)
