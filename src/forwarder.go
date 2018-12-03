@@ -109,7 +109,9 @@ func (forwarder *Forwarder) send(conn *net.TCPConn, payload Payload) error {
 	if conn == nil {
 		return errors.New("no connection")
 	}
-	log.Printf("sending %x", payload.data)
+	if verbose {
+		log.Printf("sending %x", payload.data)
+	}
 	// @todo option to prefix with length of data => byte bs := make([]byte, 4) binary.LittleEndian.PutUint32(bs, 31415926)
 	n, err := conn.Write(payload.data)
 	if err != nil {
