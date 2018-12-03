@@ -59,6 +59,7 @@ func (instance *ForwarderInstance) Conn() *net.TCPConn {
 	}
 
 	// @todo cache name resolution?
+	// @todo UDP support
 	// resolve
 	tcpAddr, err := net.ResolveTCPAddr("tcp", instance.forwarder.opts.outputAddress)
 	if err != nil {
@@ -89,6 +90,7 @@ func (forwarder *Forwarder) Run() *ForwarderInstance {
 	}
 	for {
 		payload := <-forwarder.queue
+		// @todo retry support
 		err := forwarder.send(instance.Conn(), payload)
 		if err != nil {
 			atomic.AddUint64(&forwarder.packetsFailed, 1)
