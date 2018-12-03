@@ -25,11 +25,15 @@ func init() {
 func main() {
 	opts := NewOpts()
 	opts.Device = device
-	opts.OutputTcp = outputTcp
+	opts.Output = "tcp" + separator + outputTcp
 	opts.BpfFilter = bpfFilter
 	opts.StatsPrinter = statsPrinter
 	opts.ParseLayers(layerStr)
 	opts.AutoDiscover()
+	err := opts.ParseOutput()
+	if err != nil {
+		log.Fatalf("invalid output: %s", err)
+	}
 	opts.Print()
 	opts.Validate()
 
@@ -47,7 +51,7 @@ func main() {
 	listener.SetForwarder(forwarder)
 
 	// start
-	err := listener.Listen()
+	err = listener.Listen()
 	if err != nil {
 		log.Fatalf("failed to listen %s", err)
 	}

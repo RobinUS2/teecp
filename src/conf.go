@@ -3,20 +3,30 @@ package main
 import (
 	"encoding/json"
 	"github.com/google/gopacket/pcap"
+	"github.com/pkg/errors"
 	"log"
 	"runtime"
 	"strconv"
 	"strings"
 )
 
+const separator = "|"
+const protocolTcp = "tcp"
+const optKeepAlive = "keepalive"
+
 type Opts struct {
 	Device        string
 	BpfFilter     string
-	OutputTcp     string
+	Output        string
 	MaxPacketSize int32
 	QueueSize     int
 	NumForwarders int
 	StatsPrinter  bool
+
+	// output
+	outputProtocol  string
+	outputAddress   string
+	outputKeepAlive bool
 
 	layers map[int]bool
 }
@@ -50,6 +60,29 @@ func (opts *Opts) ParseLayers(layerStr string) {
 		// no filter
 		opts.layers = nil
 	}
+}
+
+func (opts *Opts) ParseOutput() error {
+	tokens := strings.Split(opts.Output, separator)
+	if len(tokens) < 2 {
+		return errors.New("output should at least be protocol|hostname:port")
+	}
+	protocol := tokens[0]
+	if protocol != protocolTcp {
+		return errors.New("only supports TCP currently")
+	}
+
+	opts.outputProtocol = protocol
+	opts.outputAddress = tokens[1]
+	for _, token := range tokens {
+		switch token {
+		case optKeepAlive:
+			opts.outputKeepAlive = true
+			break
+		}
+	}
+
+	return nil
 }
 
 func (opts *Opts) AutoDiscover() {

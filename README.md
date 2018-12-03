@@ -38,7 +38,15 @@ A handful of examples:
 | TCP only                | tcp                                            |
 | TCP for a specific port | tcp port 1234                                  |
 | + specific source       | tcp port 1234 and src 1.2.3.4                  |
-| + specific destination  | tcp port 1234 and src 1.2.3.4 and dst 10.0.0.1 | 
+| + specific destination  | tcp port 1234 and src 1.2.3.4 and dst 10.0.0.1 |
+
+# Keep alive
+By default TCP connections are closed after forwarding a packet. It is possible to enable
+keep alive like this:
+
+```
+--output-tcp 'localhost:8080|keepalive'
+``` 
 
 ## Build & test
 The application relies upon libpcap (for Windows, [download developer pack](https://www.winpcap.org/devel.htm)) and [GoLang](https://golang.org/doc/install). 

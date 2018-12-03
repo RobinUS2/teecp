@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"strings"
+	"sync"
 	"sync/atomic"
 )
 
@@ -40,24 +41,45 @@ func (forwarder *Forwarder) Start() {
 
 type ForwarderInstance struct {
 	forwarder *Forwarder
+
+	conn    *net.TCPConn
+	connMux sync.RWMutex
 }
 
 func (instance *ForwarderInstance) Conn() *net.TCPConn {
+	if instance.forwarder.opts.outputKeepAlive {
+		// keep alive
+		instance.connMux.RLock()
+		v := instance.conn
+		instance.connMux.RUnlock()
+		if v != nil {
+			// already existing
+			return v
+		}
+	}
+
 	// @todo cache name resolution?
 	// resolve
-	tcpAddr, err := net.ResolveTCPAddr("tcp", instance.forwarder.opts.OutputTcp)
+	tcpAddr, err := net.ResolveTCPAddr("tcp", instance.forwarder.opts.outputAddress)
 	if err != nil {
 		log.Fatalf("could not resolve target %s", err)
 	}
 	log.Printf("tcpAddr %v", tcpAddr)
 
 	// connect
-	// @todo option to enable keepalive, reuse conections
 	conn, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
 		log.Printf("could not resolve target %s", err)
 		return nil
 	}
+
+	// keep?
+	if instance.forwarder.opts.outputKeepAlive {
+		instance.connMux.Lock()
+		instance.conn = conn
+		instance.connMux.Unlock()
+	}
+
 	return conn
 }
 
@@ -71,6 +93,8 @@ func (forwarder *Forwarder) Run() *ForwarderInstance {
 		if err != nil {
 			atomic.AddUint64(&forwarder.packetsFailed, 1)
 			log.Printf("failed to send %s (payload %x)", err, payload.data)
+			// reset connection on error
+			instance.resetConnection()
 			continue
 		}
 
@@ -99,7 +123,24 @@ func (forwarder *Forwarder) send(conn *net.TCPConn, payload Payload) error {
 	if verbose {
 		log.Printf("sent %d bytes to %s", n, conn.RemoteAddr().String())
 	}
+
+	// close?
+	if forwarder.opts.outputKeepAlive == false {
+		// close without keepalive
+		if err := conn.Close(); err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+func (instance *ForwarderInstance) resetConnection() {
+	if instance.forwarder.opts.outputKeepAlive {
+		instance.connMux.Lock()
+		instance.conn = nil
+		instance.connMux.Unlock()
+	}
 }
 
 func NewForwarder(opts *Opts) *Forwarder {
