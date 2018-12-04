@@ -1,7 +1,6 @@
-package main_test
+package main
 
 import (
-	teecp "../src"
 	"fmt"
 	"log"
 	"net"
@@ -15,10 +14,10 @@ import (
 const startPort = 9000
 const protocol = "tcp"
 const host = "127.0.0.1"
-const device = "lo0"
+const testDevice = "lo0"
 
 func TestAutoDiscover(t *testing.T) {
-	opts := teecp.NewOpts()
+	opts := NewOpts()
 	opts.Verbose = true
 	opts.AutoDiscover()
 	if len(opts.Device) < 1 {
@@ -29,10 +28,10 @@ func TestAutoDiscover(t *testing.T) {
 func TestNewForwarder(t *testing.T) {
 	const primaryPort = startPort + 1
 	const teePort = startPort + 2
-	opts := teecp.NewOpts()
-	opts.Device = device
+	opts := NewOpts()
+	opts.Device = testDevice
 	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
-	opts.ParseLayers(teecp.DefaultLayers)
+	opts.ParseLayers(DefaultLayers)
 	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
 	opts.Verbose = true
 	opts.StatsPrinter = true
@@ -45,10 +44,10 @@ func TestNewForwarder(t *testing.T) {
 func TestNewForwarderSilent(t *testing.T) {
 	const primaryPort = startPort + 3
 	const teePort = startPort + 4
-	opts := teecp.NewOpts()
-	opts.Device = device
+	opts := NewOpts()
+	opts.Device = testDevice
 	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
-	opts.ParseLayers(teecp.DefaultLayers)
+	opts.ParseLayers(DefaultLayers)
 	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
 	opts.Verbose = false
 	opts.StatsPrinter = false
@@ -61,10 +60,10 @@ func TestNewForwarderSilent(t *testing.T) {
 func TestNewForwarderTeeDown(t *testing.T) {
 	const primaryPort = startPort + 5
 	const teePort = startPort + 6
-	opts := teecp.NewOpts()
-	opts.Device = device
+	opts := NewOpts()
+	opts.Device = testDevice
 	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
-	opts.ParseLayers(teecp.DefaultLayers)
+	opts.ParseLayers(DefaultLayers)
 	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
 	opts.Verbose = false
 	opts.StatsPrinter = false
@@ -93,10 +92,10 @@ func TestNewForwarderTeeDown(t *testing.T) {
 func TestNewForwarderPrimaryDown(t *testing.T) {
 	const primaryPort = startPort + 7
 	const teePort = startPort + 8
-	opts := teecp.NewOpts()
-	opts.Device = device
+	opts := NewOpts()
+	opts.Device = testDevice
 	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
-	opts.ParseLayers(teecp.DefaultLayers)
+	opts.ParseLayers(DefaultLayers)
 	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
 	opts.Verbose = false
 	opts.StatsPrinter = false
@@ -133,8 +132,8 @@ func TestNewForwarderPrimaryDown(t *testing.T) {
 func TestNewForwarderNoLayerFilter(t *testing.T) {
 	const primaryPort = startPort + 9
 	const teePort = startPort + 10
-	opts := teecp.NewOpts()
-	opts.Device = device
+	opts := NewOpts()
+	opts.Device = testDevice
 	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
 	opts.ParseLayers("")
 	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
@@ -158,10 +157,10 @@ func TestNewForwarderNoLayerFilter(t *testing.T) {
 func TestNewForwarderPrefixHeader(t *testing.T) {
 	const primaryPort = startPort + 11
 	const teePort = startPort + 12
-	opts := teecp.NewOpts()
-	opts.Device = device
+	opts := NewOpts()
+	opts.Device = testDevice
 	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
-	opts.ParseLayers(teecp.DefaultLayers)
+	opts.ParseLayers(DefaultLayers)
 	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
 	opts.Verbose = false
 	opts.StatsPrinter = false
@@ -178,7 +177,7 @@ type TestControls struct {
 	shutdown   chan bool
 	conPrimary *net.TCPListener
 	conTee     *net.TCPListener
-	forwarder  *teecp.Server
+	forwarder  *Server
 }
 
 type TestOpts struct {
@@ -195,7 +194,7 @@ func (testOpts *TestOpts) OnMsg() func(port int, msg []byte) {
 	return testOpts.onMsg
 }
 
-func runTest(t *testing.T, opts *teecp.Opts, primaryPort int, teePort int, testOpts *TestOpts) *TestControls {
+func runTest(t *testing.T, opts *Opts, primaryPort int, teePort int, testOpts *TestOpts) *TestControls {
 	shutdown := make(chan bool, 1)
 	payload := fmt.Sprintf("test-msg-%d", time.Now().UnixNano())
 	numTee := uint64(0)
@@ -238,7 +237,7 @@ func runTest(t *testing.T, opts *teecp.Opts, primaryPort int, teePort int, testO
 	})
 
 	// tee forwarder
-	forwarder := teecp.NewServer(opts)
+	forwarder := NewServer(opts)
 	go func() {
 		err := forwarder.Start()
 		if err != nil {
@@ -313,7 +312,7 @@ func readConnection(t *testing.T, testOpts *TestOpts, listener *net.TCPListener,
 			if err != nil {
 				t.Error(err)
 			}
-			buf := make([]byte, teecp.DefaultMaxPacketSize)
+			buf := make([]byte, DefaultMaxPacketSize)
 			n, err := con.Read(buf)
 			if err != nil {
 				t.Error(err)
