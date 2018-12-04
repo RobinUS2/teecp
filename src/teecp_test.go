@@ -15,12 +15,13 @@ import (
 const startPort = 9000
 const protocol = "tcp"
 const host = "127.0.0.1"
+const device = "lo0"
 
 func TestNewForwarder(t *testing.T) {
 	const primaryPort = startPort + 1
 	const teePort = startPort + 2
 	opts := teecp.NewOpts()
-	opts.Device = "lo0"
+	opts.Device = device
 	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
 	opts.ParseLayers(teecp.DefaultLayers)
 	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
@@ -36,7 +37,7 @@ func TestNewForwarderSilent(t *testing.T) {
 	const primaryPort = startPort + 3
 	const teePort = startPort + 4
 	opts := teecp.NewOpts()
-	opts.Device = "lo0"
+	opts.Device = device
 	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
 	opts.ParseLayers(teecp.DefaultLayers)
 	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
@@ -52,7 +53,7 @@ func TestNewForwarderTeeDown(t *testing.T) {
 	const primaryPort = startPort + 5
 	const teePort = startPort + 6
 	opts := teecp.NewOpts()
-	opts.Device = "lo0"
+	opts.Device = device
 	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
 	opts.ParseLayers(teecp.DefaultLayers)
 	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
@@ -84,7 +85,7 @@ func TestNewForwarderPrimaryDown(t *testing.T) {
 	const primaryPort = startPort + 7
 	const teePort = startPort + 8
 	opts := teecp.NewOpts()
-	opts.Device = "lo0"
+	opts.Device = device
 	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
 	opts.ParseLayers(teecp.DefaultLayers)
 	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
@@ -112,6 +113,37 @@ func TestNewForwarderPrimaryDown(t *testing.T) {
 
 	// await a bit for the retries, but don't wait for final shutdown
 	time.Sleep(1 * time.Second)
+
+	// stats
+	stats := controls.forwarder.Stats()
+	if stats.PacketsFailed > 0 {
+		t.Errorf("missing packets %+v", stats)
+	}
+}
+
+func TestNewForwarderNoLayerFilter(t *testing.T) {
+	const primaryPort = startPort + 9
+	const teePort = startPort + 10
+	opts := teecp.NewOpts()
+	opts.Device = device
+	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
+	opts.ParseLayers("")
+	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
+	opts.Verbose = false
+	opts.StatsPrinter = false
+	opts.StatsIntervalMilliseconds = 500
+	controls := runTest(t, opts, primaryPort, teePort, &TestOpts{
+		ValidateMsgString: false,
+	})
+
+	// await a bit for the retries, but don't wait for final shutdown
+	time.Sleep(1 * time.Second)
+
+	// stats
+	stats := controls.forwarder.Stats()
+	if stats.PacketsFailed > 0 {
+		t.Errorf("missing packets %+v", stats)
+	}
 }
 
 type TestControls struct {
@@ -125,6 +157,8 @@ type TestOpts struct {
 	onMsg              func(port int, msg []byte)
 	mux                sync.RWMutex
 	AllowFailedSending bool
+	ValidateMsgString  bool
+	KeepAlive          bool
 }
 
 func (testOpts *TestOpts) OnMsg() func(port int, msg []byte) {
@@ -141,32 +175,36 @@ func runTest(t *testing.T, opts *teecp.Opts, primaryPort int, teePort int, testO
 
 	// primary receiver (e.g. your web server)
 	conPrimary := getConnection(t, primaryPort)
-	readConnection(t, conPrimary, func(msg []byte) {
+	readConnection(t, testOpts, conPrimary, func(msg []byte) {
 		// test hook
 		if testOpts != nil && testOpts.OnMsg() != nil {
 			testOpts.OnMsg()(primaryPort, msg)
 		}
 		// validate
-		str := string(msg)
-		log.Printf("primary %s", str)
-		if !strings.HasPrefix(str, payload) {
-			return
+		if testOpts == nil || testOpts.ValidateMsgString {
+			str := string(msg)
+			log.Printf("primary %s", str)
+			if !strings.HasPrefix(str, payload) {
+				return
+			}
 		}
 		atomic.AddUint64(&numPrimary, 1)
 	})
 
 	// tee receiver (e.g. your staging environment)
 	conTee := getConnection(t, teePort)
-	readConnection(t, conTee, func(msg []byte) {
+	readConnection(t, testOpts, conTee, func(msg []byte) {
 		// test hook
 		if testOpts != nil && testOpts.OnMsg() != nil {
 			testOpts.OnMsg()(teePort, msg)
 		}
 		// validate
-		str := string(msg)
-		log.Printf("tee %s", str)
-		if !strings.HasPrefix(str, payload) {
-			return
+		if testOpts == nil || testOpts.ValidateMsgString {
+			str := string(msg)
+			log.Printf("tee %s", str)
+			if !strings.HasPrefix(str, payload) {
+				return
+			}
 		}
 		atomic.AddUint64(&numTee, 1)
 	})
@@ -237,7 +275,7 @@ func getConnection(t *testing.T, port int) *net.TCPListener {
 	return con
 }
 
-func readConnection(t *testing.T, listener *net.TCPListener, onMsg func(msg []byte)) {
+func readConnection(t *testing.T, testOpts *TestOpts, listener *net.TCPListener, onMsg func(msg []byte)) {
 	go func() {
 		for {
 			con, err := listener.Accept()

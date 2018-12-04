@@ -19,7 +19,27 @@ func (forwarder *Forwarder) printStats() {
 	ticker := time.NewTicker(time.Duration(interval) * time.Millisecond)
 	go func() {
 		for _ = range ticker.C {
-			log.Printf("forwarded %d bytes, %d packets, %d failed attempts, %d failed packets", atomic.LoadUint64(&forwarder.bytesForwarded), atomic.LoadUint64(&forwarder.packetsForwarded), atomic.LoadUint64(&forwarder.packetAttemptsFailed), atomic.LoadUint64(&forwarder.packetsFailed))
+			log.Printf("stats %+v", forwarder.Stats())
 		}
 	}()
+}
+
+type Stats struct {
+	BytesForwarded       uint64
+	PacketsForwarded     uint64
+	PacketAttemptsFailed uint64
+	PacketsFailed        uint64
+}
+
+func (server *Server) Stats() Stats {
+	return server.Forwarder().Stats()
+}
+
+func (forwarder *Forwarder) Stats() Stats {
+	return Stats{
+		BytesForwarded:       atomic.LoadUint64(&forwarder.bytesForwarded),
+		PacketsForwarded:     atomic.LoadUint64(&forwarder.packetsForwarded),
+		PacketAttemptsFailed: atomic.LoadUint64(&forwarder.packetAttemptsFailed),
+		PacketsFailed:        atomic.LoadUint64(&forwarder.packetsFailed),
+	}
 }

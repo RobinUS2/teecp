@@ -147,19 +147,28 @@ func (instance *ForwarderInstance) handlePayload(payload Payload) {
 	// retry support
 	var err error
 	for i := 0; i < instance.forwarder.opts.MaxRetries; i++ {
+		// reset connection?
+		if i > 0 {
+			// sleep a bit
+			time.Sleep(time.Duration(100+(i*i*1000)) * time.Millisecond)
+
+			// reset connection on error
+			instance.resetConnection()
+		}
+
 		// attempt
-		err = instance.forwarder.send(instance.Conn(), payload)
+		conn := instance.Conn()
+		if conn == nil {
+			// try to connect again
+			continue
+		}
+		// send
+		err = instance.forwarder.send(conn, payload)
 		if err != nil {
 			if instance.forwarder.opts.Verbose {
 				log.Printf("failed attempt to send %s (payload %x)", err, payload.data)
 			}
 			atomic.AddUint64(&instance.forwarder.packetAttemptsFailed, 1)
-
-			// reset connection on error
-			instance.resetConnection()
-
-			// sleep a bit
-			time.Sleep(time.Duration(100+(i*i*1000)) * time.Millisecond)
 
 			// try again
 			continue

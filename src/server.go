@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"sync"
 )
 
 var device *string
@@ -74,7 +75,15 @@ func main() {
 }
 
 type Server struct {
-	opts *Opts
+	opts      *Opts
+	forwarder *Forwarder
+	mux       sync.RWMutex
+}
+
+func (server *Server) Forwarder() *Forwarder {
+	server.mux.RLock()
+	defer server.mux.RUnlock()
+	return server.forwarder
 }
 
 func (server *Server) Start() error {
@@ -91,11 +100,13 @@ func (server *Server) Start() error {
 	listener := NewRawListener(server.opts)
 
 	//forwarder
-	forwarder := NewForwarder(server.opts)
-	forwarder.Start()
+	server.mux.Lock()
+	server.forwarder = NewForwarder(server.opts)
+	server.mux.Unlock()
+	server.forwarder.Start()
 
 	// inject into listener
-	listener.SetForwarder(forwarder)
+	listener.SetForwarder(server.forwarder)
 
 	// start
 	return listener.Listen()
