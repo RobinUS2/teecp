@@ -103,7 +103,7 @@ func (opts *Opts) AutoDiscover() {
 	}
 
 	// Print device information
-	if verbose {
+	if opts.Verbose {
 		log.Println("Devices found:")
 		for _, device := range devices {
 			log.Printf("Name: %s", device.Name)

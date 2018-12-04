@@ -25,7 +25,7 @@ func (forwarder *Forwarder) Queue(payload Payload) {
 	if payload.data == nil || len(payload.data) < 1 {
 		return
 	}
-	if verbose {
+	if forwarder.opts.Verbose {
 		log.Printf("queued %x %s", payload.data, strings.TrimSpace(string(payload.data)))
 	}
 	forwarder.queue <- payload
@@ -68,7 +68,7 @@ func (instance *ForwarderInstance) Conn() *net.TCPConn {
 		log.Printf("could not resolve target %s", err)
 		return nil
 	}
-	if verbose {
+	if instance.forwarder.opts.Verbose {
 		log.Printf("tcpAddr %v", tcpAddr)
 	}
 
@@ -109,7 +109,7 @@ func (forwarder *Forwarder) send(conn *net.TCPConn, payload Payload) error {
 	if conn == nil {
 		return errors.New("no connection")
 	}
-	if verbose {
+	if forwarder.opts.Verbose {
 		log.Printf("sending %x", payload.data)
 	}
 	// @todo option to prefix with length of data => byte bs := make([]byte, 4) binary.LittleEndian.PutUint32(bs, 31415926)
@@ -121,7 +121,7 @@ func (forwarder *Forwarder) send(conn *net.TCPConn, payload Payload) error {
 	atomic.AddUint64(&forwarder.bytesForwarded, uint64(n))
 	atomic.AddUint64(&forwarder.packetsForwarded, 1)
 
-	if verbose {
+	if forwarder.opts.Verbose {
 		log.Printf("sent %d bytes to %s", n, conn.RemoteAddr().String())
 	}
 
@@ -150,7 +150,7 @@ func (instance *ForwarderInstance) handlePayload(payload Payload) {
 		// attempt
 		err = instance.forwarder.send(instance.Conn(), payload)
 		if err != nil {
-			if verbose {
+			if instance.forwarder.opts.Verbose {
 				log.Printf("failed attempt to send %s (payload %x)", err, payload.data)
 			}
 			atomic.AddUint64(&instance.forwarder.packetAttemptsFailed, 1)

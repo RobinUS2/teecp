@@ -20,7 +20,7 @@ func (listener *RawListener) SetForwarder(forwarder *Forwarder) {
 }
 
 func (listener *RawListener) Listen() error {
-	if verbose {
+	if listener.opts.Verbose {
 		log.Printf("start listening at %s", listener.opts.Device)
 	}
 	if handle, err := pcap.OpenLive(listener.opts.Device, listener.opts.MaxPacketSize, true, pcap.BlockForever); err != nil {
@@ -37,14 +37,14 @@ func (listener *RawListener) Listen() error {
 }
 
 func (listener *RawListener) handlePacket(packet gopacket.Packet) {
-	if verbose {
+	if listener.opts.Verbose {
 		log.Printf("recv packet %+v", packet) // Do something with a packet here.
 	}
 
 	// specific layer?
 	if listener.opts.layers != nil {
 		for _, layer := range packet.Layers() {
-			if verbose {
+			if listener.opts.Verbose {
 				log.Printf("  layer type=%d payload=%x (%s) content=%x", layer.LayerType(), layer.LayerPayload(), string(layer.LayerPayload()), layer.LayerContents())
 			}
 			if listener.opts.layers != nil && !listener.opts.layers[int(layer.LayerType())] {

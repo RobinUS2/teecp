@@ -16,13 +16,40 @@ const protocol = "tcp"
 const host = "127.0.0.1"
 
 func TestNewForwarder(t *testing.T) {
+	const primaryPort = startPort + 1
+	const teePort = startPort + 2
+	opts := teecp.NewOpts()
+	opts.Device = "lo0"
+	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
+	opts.ParseLayers(teecp.DefaultLayers)
+	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
+	opts.Verbose = true
+	opts.StatsPrinter = true
+	opts.StatsIntervalMilliseconds = 500
+	runTest(t, opts, primaryPort, teePort)
+}
+
+func TestNewForwarderSilent(t *testing.T) {
+	const primaryPort = startPort + 3
+	const teePort = startPort + 4
+	opts := teecp.NewOpts()
+	opts.Device = "lo0"
+	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
+	opts.ParseLayers(teecp.DefaultLayers)
+	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
+	opts.Verbose = false
+	opts.StatsPrinter = false
+	opts.StatsIntervalMilliseconds = 500
+	runTest(t, opts, primaryPort, teePort)
+}
+
+func runTest(t *testing.T, opts *teecp.Opts, primaryPort int, teePort int) {
 	shutdown := make(chan bool, 1)
 	payload := fmt.Sprintf("test-msg-%d", time.Now().UnixNano())
 	numTee := uint64(0)
 	numPrimary := uint64(0)
 
 	// primary receiver (e.g. your web server)
-	const primaryPort = startPort + 1
 	con := getConnection(t, primaryPort)
 	readConnection(t, con, func(msg []byte) {
 		str := string(msg)
@@ -34,7 +61,6 @@ func TestNewForwarder(t *testing.T) {
 	})
 
 	// tee receiver (e.g. your staging environment)
-	const teePort = startPort + 2
 	conTee := getConnection(t, teePort)
 	readConnection(t, conTee, func(msg []byte) {
 		str := string(msg)
@@ -47,14 +73,6 @@ func TestNewForwarder(t *testing.T) {
 
 	// tee forwarder
 	go func() {
-		opts := teecp.NewOpts()
-		opts.Device = "lo0"
-		opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
-		opts.ParseLayers(teecp.DefaultLayers)
-		opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
-		opts.Verbose = true
-		opts.StatsPrinter = true
-		opts.StatsIntervalMilliseconds = 500
 		forwarder := teecp.NewServer(opts)
 		err := forwarder.Start()
 		if err != nil {
