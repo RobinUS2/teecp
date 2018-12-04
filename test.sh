@@ -1,3 +1,5 @@
 #!/bin/bash
+set -e
 cd src
-go test -v --race -cover .
+go vet -v .
+go test -v -race -cover .
