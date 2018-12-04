@@ -2,3 +2,6 @@ language: go
 
 go:
   - "1.11"
+
+before_install:
+  - "wget https://www.winpcap.org/install/bin/WpdPack_4_1_2.zip && unzip WpdPack_4_1_2.zip && cd WpdPack && ls -lah"
