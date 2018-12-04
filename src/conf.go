@@ -26,6 +26,7 @@ type Opts struct {
 	StatsIntervalMilliseconds int
 	MaxRetries                int
 	Verbose                   bool
+	PrefixHeader              bool
 
 	// output
 	outputProtocol  string

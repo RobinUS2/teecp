@@ -12,6 +12,7 @@ var verbose *bool
 var layerStr *string
 var outputTcp *string
 var statsPrinter *bool
+var prefixHeader *bool
 
 const DefaultLayers = "44,45"
 
@@ -51,6 +52,14 @@ func init() {
 		statsPrinter = &b
 	}
 	flag.BoolVar(statsPrinter, "stats", true, "print stats")
+
+	{
+		b := false
+		prefixHeader = &b
+	}
+	flag.BoolVar(prefixHeader, "prefix-header", false, "prefix header (include payload size, src, src port, dst, dst port)")
+
+	// parse
 	flag.Parse()
 }
 
@@ -61,6 +70,7 @@ func main() {
 	opts.BpfFilter = *bpfFilter
 	opts.Verbose = *verbose
 	opts.StatsPrinter = *statsPrinter
+	opts.PrefixHeader = *prefixHeader
 	opts.ParseLayers(*layerStr)
 
 	// prevent usage of non opts

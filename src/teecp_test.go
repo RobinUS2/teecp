@@ -155,6 +155,25 @@ func TestNewForwarderNoLayerFilter(t *testing.T) {
 	}
 }
 
+func TestNewForwarderPrefixHeader(t *testing.T) {
+	const primaryPort = startPort + 11
+	const teePort = startPort + 12
+	opts := teecp.NewOpts()
+	opts.Device = device
+	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
+	opts.ParseLayers(teecp.DefaultLayers)
+	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
+	opts.Verbose = false
+	opts.StatsPrinter = false
+	opts.StatsIntervalMilliseconds = 500
+	opts.PrefixHeader = true
+	controls := runTest(t, opts, primaryPort, teePort, &TestOpts{
+		ValidateMsgString: false,
+	})
+	// await
+	<-controls.shutdown
+}
+
 type TestControls struct {
 	shutdown   chan bool
 	conPrimary *net.TCPListener
