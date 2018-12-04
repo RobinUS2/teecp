@@ -14,7 +14,7 @@ import (
 const startPort = 9000
 const protocol = "tcp"
 const host = "127.0.0.1"
-const testDevice = "lo0"
+const testDevice = "lo"
 
 func TestAutoDiscover(t *testing.T) {
 	opts := NewOpts()
