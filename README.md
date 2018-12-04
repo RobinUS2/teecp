@@ -1,4 +1,4 @@
-# teecp
+# teecp [![Build Status](https://travis-ci.org/RobinUS2/teecp.svg?branch=master)](https://travis-ci.org/RobinUS2/teecp)
 TCP tee implementation (Linux, Mac OS X, Windows) - duplicate TCP packets
 
 ## Purpose
