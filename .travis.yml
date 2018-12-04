@@ -11,6 +11,4 @@ before_install:
   - "echo $TRAVIS_BUILD_DIR && pwd && ls -lah && ls -lah $TRAVIS_BUILD_DIR && ls -lah lib && ls -lah include"
   - "sudo apt-get install -y libpcap-dev"
 
-install: go get "github.com/google/gopacket" && go get "github.com/google/gopacket/pcap" && go get "github.com/pkg/errors"
-
-script: "./test.sh && ./docker_build.sh && ./docker_run.sh"
+script: "./docker_build.sh && ./docker_run.sh"
