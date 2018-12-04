@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -26,7 +27,9 @@ func TestNewForwarder(t *testing.T) {
 	opts.Verbose = true
 	opts.StatsPrinter = true
 	opts.StatsIntervalMilliseconds = 500
-	runTest(t, opts, primaryPort, teePort)
+	controls := runTest(t, opts, primaryPort, teePort, nil)
+	// await
+	<-controls.shutdown
 }
 
 func TestNewForwarderSilent(t *testing.T) {
@@ -40,18 +43,75 @@ func TestNewForwarderSilent(t *testing.T) {
 	opts.Verbose = false
 	opts.StatsPrinter = false
 	opts.StatsIntervalMilliseconds = 500
-	runTest(t, opts, primaryPort, teePort)
+	controls := runTest(t, opts, primaryPort, teePort, nil)
+	// await
+	<-controls.shutdown
 }
 
-func runTest(t *testing.T, opts *teecp.Opts, primaryPort int, teePort int) {
+func TestNewForwarderTeeDown(t *testing.T) {
+	const primaryPort = startPort + 5
+	const teePort = startPort + 6
+	opts := teecp.NewOpts()
+	opts.Device = "lo0"
+	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
+	opts.ParseLayers(teecp.DefaultLayers)
+	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
+	opts.Verbose = false
+	opts.StatsPrinter = false
+	opts.StatsIntervalMilliseconds = 500
+	counter := uint64(0)
+
+	testOpts := &TestOpts{}
+	controls := runTest(t, opts, primaryPort, teePort, testOpts)
+
+	// inject on message hook
+	testOpts.mux.Lock()
+	testOpts.onMsg = func(port int, msg []byte) {
+		if atomic.AddUint64(&counter, 1) == 5 {
+			// in middle, close connection of tee
+			if err := controls.conTee.Close(); err != nil {
+				t.Error(err)
+			}
+		}
+	}
+	testOpts.mux.Unlock()
+
+	// await a bit for the retries, but don't wait for final shutdown
+	time.Sleep(1 * time.Second)
+}
+
+type TestControls struct {
+	shutdown   chan bool
+	conPrimary *net.TCPListener
+	conTee     *net.TCPListener
+	forwarder  *teecp.Server
+}
+
+type TestOpts struct {
+	onMsg func(port int, msg []byte)
+	mux   sync.RWMutex
+}
+
+func (testOpts *TestOpts) OnMsg() func(port int, msg []byte) {
+	testOpts.mux.RLock()
+	defer testOpts.mux.RUnlock()
+	return testOpts.onMsg
+}
+
+func runTest(t *testing.T, opts *teecp.Opts, primaryPort int, teePort int, testOpts *TestOpts) *TestControls {
 	shutdown := make(chan bool, 1)
 	payload := fmt.Sprintf("test-msg-%d", time.Now().UnixNano())
 	numTee := uint64(0)
 	numPrimary := uint64(0)
 
 	// primary receiver (e.g. your web server)
-	con := getConnection(t, primaryPort)
-	readConnection(t, con, func(msg []byte) {
+	conPrimary := getConnection(t, primaryPort)
+	readConnection(t, conPrimary, func(msg []byte) {
+		// test hook
+		if testOpts != nil && testOpts.OnMsg() != nil {
+			testOpts.OnMsg()(primaryPort, msg)
+		}
+		// validate
 		str := string(msg)
 		log.Printf("primary %s", str)
 		if !strings.HasPrefix(str, payload) {
@@ -63,6 +123,11 @@ func runTest(t *testing.T, opts *teecp.Opts, primaryPort int, teePort int) {
 	// tee receiver (e.g. your staging environment)
 	conTee := getConnection(t, teePort)
 	readConnection(t, conTee, func(msg []byte) {
+		// test hook
+		if testOpts != nil && testOpts.OnMsg() != nil {
+			testOpts.OnMsg()(teePort, msg)
+		}
+		// validate
 		str := string(msg)
 		log.Printf("tee %s", str)
 		if !strings.HasPrefix(str, payload) {
@@ -72,8 +137,8 @@ func runTest(t *testing.T, opts *teecp.Opts, primaryPort int, teePort int) {
 	})
 
 	// tee forwarder
+	forwarder := teecp.NewServer(opts)
 	go func() {
-		forwarder := teecp.NewServer(opts)
 		err := forwarder.Start()
 		if err != nil {
 			t.Error(err)
@@ -101,15 +166,23 @@ func runTest(t *testing.T, opts *teecp.Opts, primaryPort int, teePort int) {
 	}()
 
 	// wait for at least 1 stats print
-	time.Sleep(500 * time.Millisecond)
+	go func() {
+		for i := 0; i < 10; i++ {
+			time.Sleep(500 * time.Millisecond)
 
-	// done :)
-	if atomic.LoadUint64(&numTee) == 10 && atomic.LoadUint64(&numPrimary) == 10 {
-		shutdown <- true
+			// done :)
+			if atomic.LoadUint64(&numTee) == 10 && atomic.LoadUint64(&numPrimary) == 10 {
+				shutdown <- true
+			}
+		}
+	}()
+
+	return &TestControls{
+		shutdown:   shutdown,
+		conPrimary: conPrimary,
+		conTee:     conTee,
+		forwarder:  forwarder,
 	}
-
-	// await
-	<-shutdown
 }
 
 func getConnection(t *testing.T, port int) *net.TCPListener {
@@ -128,6 +201,9 @@ func readConnection(t *testing.T, listener *net.TCPListener, onMsg func(msg []by
 	go func() {
 		for {
 			con, err := listener.Accept()
+			if con == nil {
+				break
+			}
 			if err != nil {
 				t.Error(err)
 			}
