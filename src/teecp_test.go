@@ -80,6 +80,40 @@ func TestNewForwarderTeeDown(t *testing.T) {
 	time.Sleep(1 * time.Second)
 }
 
+func TestNewForwarderPrimaryDown(t *testing.T) {
+	const primaryPort = startPort + 7
+	const teePort = startPort + 8
+	opts := teecp.NewOpts()
+	opts.Device = "lo0"
+	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
+	opts.ParseLayers(teecp.DefaultLayers)
+	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
+	opts.Verbose = false
+	opts.StatsPrinter = false
+	opts.StatsIntervalMilliseconds = 500
+	counter := uint64(0)
+
+	testOpts := &TestOpts{
+		AllowFailedSending: true,
+	}
+	controls := runTest(t, opts, primaryPort, teePort, testOpts)
+
+	// inject on message hook
+	testOpts.mux.Lock()
+	testOpts.onMsg = func(port int, msg []byte) {
+		if atomic.AddUint64(&counter, 1) == 5 {
+			// in middle, close connection of primary
+			if err := controls.conPrimary.Close(); err != nil {
+				t.Error(err)
+			}
+		}
+	}
+	testOpts.mux.Unlock()
+
+	// await a bit for the retries, but don't wait for final shutdown
+	time.Sleep(1 * time.Second)
+}
+
 type TestControls struct {
 	shutdown   chan bool
 	conPrimary *net.TCPListener
@@ -88,8 +122,9 @@ type TestControls struct {
 }
 
 type TestOpts struct {
-	onMsg func(port int, msg []byte)
-	mux   sync.RWMutex
+	onMsg              func(port int, msg []byte)
+	mux                sync.RWMutex
+	AllowFailedSending bool
 }
 
 func (testOpts *TestOpts) OnMsg() func(port int, msg []byte) {
@@ -155,6 +190,11 @@ func runTest(t *testing.T, opts *teecp.Opts, primaryPort int, teePort int, testO
 				t.Error(err)
 			}
 			con, err := net.DialTCP(protocol, nil, addr)
+			if testOpts != nil && testOpts.AllowFailedSending {
+				if err != nil && con == nil {
+					continue
+				}
+			}
 			if err != nil {
 				t.Error(err)
 			}
