@@ -9,5 +9,8 @@ services:
 before_install:
   - "wget https://www.winpcap.org/install/bin/WpdPack_4_1_2.zip && unzip WpdPack_4_1_2.zip && cd WpdPack && ls -lah && cp -r Lib/x64/* $TRAVIS_BUILD_DIR/lib/ && cp -r Include/* $TRAVIS_BUILD_DIR/include/ && ls -lah $TRAVIS_BUILD_DIR && cd .. && rm -rf WpdPack*"
   - "echo $TRAVIS_BUILD_DIR && pwd && ls -lah && ls -lah $TRAVIS_BUILD_DIR && ls -lah lib && ls -lah include"
+  - "sudo apt-get install -y libpcap-dev"
+
+install: go get "github.com/google/gopacket" && go get "github.com/google/gopacket/pcap" && go get "github.com/pkg/errors"
 
 script: "./docker_build.sh && ./docker_run.sh"
