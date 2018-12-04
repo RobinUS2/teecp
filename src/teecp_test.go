@@ -17,6 +17,15 @@ const protocol = "tcp"
 const host = "127.0.0.1"
 const device = "lo0"
 
+func TestAutoDiscover(t *testing.T) {
+	opts := teecp.NewOpts()
+	opts.Verbose = true
+	opts.AutoDiscover()
+	if len(opts.Device) < 1 {
+		t.Error(opts.Device)
+	}
+}
+
 func TestNewForwarder(t *testing.T) {
 	const primaryPort = startPort + 1
 	const teePort = startPort + 2
