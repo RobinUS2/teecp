@@ -11,4 +11,6 @@ before_install:
   - "echo $TRAVIS_BUILD_DIR && pwd && ls -lah && ls -lah $TRAVIS_BUILD_DIR && ls -lah lib && ls -lah include"
   - "sudo apt-get install -y libpcap-dev"
 
+install: true # disable
+
 script: "./test.sh && ./docker_build.sh && ./docker_run.sh"
