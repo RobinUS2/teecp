@@ -3,6 +3,9 @@ language: go
 go:
   - "1.11"
 
+services:
+  - docker
+
 before_install:
   - "wget https://www.winpcap.org/install/bin/WpdPack_4_1_2.zip && unzip WpdPack_4_1_2.zip && cd WpdPack && ls -lah && cp -r Lib/x64/* $TRAVIS_BUILD_DIR/lib/ && cp -r Include/* $TRAVIS_BUILD_DIR/include/"
   - "ls -lah lib && ls -lah include"
