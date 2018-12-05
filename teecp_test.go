@@ -1,6 +1,7 @@
 package main
 
 import (
+	"./forwarder"
 	"fmt"
 	"log"
 	"net"
@@ -17,7 +18,7 @@ const host = "127.0.0.1"
 const testDevice = "lo"
 
 func TestAutoDiscover(t *testing.T) {
-	opts := NewOpts()
+	opts := forwarder.NewOpts()
 	opts.Verbose = true
 	opts.AutoDiscover()
 	if len(opts.Device) < 1 {
@@ -28,10 +29,10 @@ func TestAutoDiscover(t *testing.T) {
 func TestNewForwarder(t *testing.T) {
 	const primaryPort = startPort + 1
 	const teePort = startPort + 2
-	opts := NewOpts()
+	opts := forwarder.NewOpts()
 	opts.Device = testDevice
 	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
-	opts.ParseLayers(DefaultLayers)
+	opts.ParseLayers(forwarder.DefaultLayers)
 	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
 	opts.Verbose = true
 	opts.StatsPrinter = true
@@ -44,10 +45,10 @@ func TestNewForwarder(t *testing.T) {
 func TestNewForwarderSilent(t *testing.T) {
 	const primaryPort = startPort + 3
 	const teePort = startPort + 4
-	opts := NewOpts()
+	opts := forwarder.NewOpts()
 	opts.Device = testDevice
 	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
-	opts.ParseLayers(DefaultLayers)
+	opts.ParseLayers(forwarder.DefaultLayers)
 	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
 	opts.Verbose = false
 	opts.StatsPrinter = false
@@ -60,10 +61,10 @@ func TestNewForwarderSilent(t *testing.T) {
 func TestNewForwarderTeeDown(t *testing.T) {
 	const primaryPort = startPort + 5
 	const teePort = startPort + 6
-	opts := NewOpts()
+	opts := forwarder.NewOpts()
 	opts.Device = testDevice
 	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
-	opts.ParseLayers(DefaultLayers)
+	opts.ParseLayers(forwarder.DefaultLayers)
 	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
 	opts.Verbose = false
 	opts.StatsPrinter = false
@@ -92,10 +93,10 @@ func TestNewForwarderTeeDown(t *testing.T) {
 func TestNewForwarderPrimaryDown(t *testing.T) {
 	const primaryPort = startPort + 7
 	const teePort = startPort + 8
-	opts := NewOpts()
+	opts := forwarder.NewOpts()
 	opts.Device = testDevice
 	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
-	opts.ParseLayers(DefaultLayers)
+	opts.ParseLayers(forwarder.DefaultLayers)
 	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
 	opts.Verbose = false
 	opts.StatsPrinter = false
@@ -123,7 +124,7 @@ func TestNewForwarderPrimaryDown(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	// stats
-	stats := controls.forwarder.Stats()
+	stats := controls.fw.Stats()
 	if stats.PacketsFailed > 0 {
 		t.Errorf("missing packets %+v", stats)
 	}
@@ -132,7 +133,7 @@ func TestNewForwarderPrimaryDown(t *testing.T) {
 func TestNewForwarderNoLayerFilter(t *testing.T) {
 	const primaryPort = startPort + 9
 	const teePort = startPort + 10
-	opts := NewOpts()
+	opts := forwarder.NewOpts()
 	opts.Device = testDevice
 	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
 	opts.ParseLayers("")
@@ -148,7 +149,7 @@ func TestNewForwarderNoLayerFilter(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	// stats
-	stats := controls.forwarder.Stats()
+	stats := controls.fw.Forwarder().Stats()
 	if stats.PacketsFailed > 0 {
 		t.Errorf("missing packets %+v", stats)
 	}
@@ -157,10 +158,10 @@ func TestNewForwarderNoLayerFilter(t *testing.T) {
 func TestNewForwarderPrefixHeader(t *testing.T) {
 	const primaryPort = startPort + 11
 	const teePort = startPort + 12
-	opts := NewOpts()
+	opts := forwarder.NewOpts()
 	opts.Device = testDevice
 	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
-	opts.ParseLayers(DefaultLayers)
+	opts.ParseLayers(forwarder.DefaultLayers)
 	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
 	opts.Verbose = false
 	opts.StatsPrinter = false
@@ -177,7 +178,7 @@ type TestControls struct {
 	shutdown   chan bool
 	conPrimary *net.TCPListener
 	conTee     *net.TCPListener
-	forwarder  *Server
+	fw         *forwarder.Server
 }
 
 type TestOpts struct {
@@ -194,7 +195,7 @@ func (testOpts *TestOpts) OnMsg() func(port int, msg []byte) {
 	return testOpts.onMsg
 }
 
-func runTest(t *testing.T, opts *Opts, primaryPort int, teePort int, testOpts *TestOpts) *TestControls {
+func runTest(t *testing.T, opts *forwarder.Opts, primaryPort int, teePort int, testOpts *TestOpts) *TestControls {
 	shutdown := make(chan bool, 1)
 	payload := fmt.Sprintf("test-msg-%d", time.Now().UnixNano())
 	numTee := uint64(0)
@@ -237,9 +238,9 @@ func runTest(t *testing.T, opts *Opts, primaryPort int, teePort int, testOpts *T
 	})
 
 	// tee forwarder
-	forwarder := NewServer(opts)
+	fw := forwarder.NewServer(opts)
 	go func() {
-		err := forwarder.Start()
+		err := fw.Start()
 		if err != nil {
 			t.Error(err)
 		}
@@ -286,7 +287,7 @@ func runTest(t *testing.T, opts *Opts, primaryPort int, teePort int, testOpts *T
 		shutdown:   shutdown,
 		conPrimary: conPrimary,
 		conTee:     conTee,
-		forwarder:  forwarder,
+		fw:         fw,
 	}
 }
 
@@ -312,7 +313,7 @@ func readConnection(t *testing.T, testOpts *TestOpts, listener *net.TCPListener,
 			if err != nil {
 				t.Error(err)
 			}
-			buf := make([]byte, DefaultMaxPacketSize)
+			buf := make([]byte, forwarder.DefaultMaxPacketSize)
 			n, err := con.Read(buf)
 			if err != nil {
 				t.Error(err)

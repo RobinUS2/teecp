@@ -15,7 +15,7 @@ RUN apt-get update && \
 VOLUME ["/usr/local/src"]
 
 RUN mkdir -p /usr/local/app
-ENV GOPATH=/usr/local/app/gopath/
-ENV GOBIN=/usr/local/app/src/
+ENV GOPATH=/root
+ENV GOBIN=/usr/local/app/forwarder/
 
-WORKDIR /usr/local/app/src/
+WORKDIR /usr/local/app/

@@ -1,4 +1,4 @@
-package main
+package forwarder
 
 import (
 	"encoding/json"
@@ -10,10 +10,11 @@ import (
 	"strings"
 )
 
-const separator = "|"
+const ConfSeparator = "|"
 const protocolTcp = "tcp"
 const optKeepAlive = "keepalive"
 const DefaultMaxPacketSize = 65536
+const DefaultLayers = "44,45"
 
 type Opts struct {
 	Device                    string
@@ -70,7 +71,7 @@ func (opts *Opts) ParseLayers(layerStr string) {
 }
 
 func (opts *Opts) ParseOutput() error {
-	tokens := strings.Split(opts.Output, separator)
+	tokens := strings.Split(opts.Output, ConfSeparator)
 	if len(tokens) < 2 {
 		return errors.New("output should at least be protocol|hostname:port")
 	}
