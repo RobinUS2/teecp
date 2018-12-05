@@ -1,4 +1,4 @@
-package main
+package forwarder
 
 import (
 	"github.com/pkg/errors"

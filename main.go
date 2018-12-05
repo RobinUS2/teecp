@@ -1,9 +1,9 @@
 package main
 
 import (
+	"./forwarder"
 	"flag"
 	"log"
-	"sync"
 )
 
 var device *string
@@ -13,8 +13,6 @@ var layerStr *string
 var outputTcp *string
 var statsPrinter *bool
 var prefixHeader *bool
-
-const DefaultLayers = "44,45"
 
 func init() {
 	{
@@ -33,7 +31,7 @@ func init() {
 		str := ""
 		layerStr = &str
 	}
-	flag.StringVar(layerStr, "layers", DefaultLayers, "layers comma separated - 44 = TCP, 45 = UDP https://github.com/google/gopacket/blob/master/layers/layertypes.go")
+	flag.StringVar(layerStr, "layers", forwarder.DefaultLayers, "layers comma separated - 44 = TCP, 45 = UDP https://github.com/google/gopacket/blob/master/layers/layertypes.go")
 
 	{
 		str := ""
@@ -64,9 +62,9 @@ func init() {
 }
 
 func main() {
-	opts := NewOpts()
+	opts := forwarder.NewOpts()
 	opts.Device = *device
-	opts.Output = "tcp" + separator + *outputTcp
+	opts.Output = "tcp" + forwarder.ConfSeparator + *outputTcp
 	opts.BpfFilter = *bpfFilter
 	opts.Verbose = *verbose
 	opts.StatsPrinter = *statsPrinter
@@ -77,54 +75,10 @@ func main() {
 	unsetLocal()
 
 	// start
-	server := NewServer(opts)
+	server := forwarder.NewServer(opts)
 	err := server.Start()
 	if err != nil {
 		log.Fatalf("failed to start: %s", err)
-	}
-}
-
-type Server struct {
-	opts      *Opts
-	forwarder *Forwarder
-	mux       sync.RWMutex
-}
-
-func (server *Server) Forwarder() *Forwarder {
-	server.mux.RLock()
-	defer server.mux.RUnlock()
-	return server.forwarder
-}
-
-func (server *Server) Start() error {
-	// opts
-	server.opts.AutoDiscover()
-	err := server.opts.ParseOutput()
-	if err != nil {
-		return err
-	}
-	server.opts.Print()
-	server.opts.Validate()
-
-	// listener
-	listener := NewRawListener(server.opts)
-
-	//forwarder
-	server.mux.Lock()
-	server.forwarder = NewForwarder(server.opts)
-	server.mux.Unlock()
-	server.forwarder.Start()
-
-	// inject into listener
-	listener.SetForwarder(server.forwarder)
-
-	// start
-	return listener.Listen()
-}
-
-func NewServer(opts *Opts) *Server {
-	return &Server{
-		opts: opts,
 	}
 }
 

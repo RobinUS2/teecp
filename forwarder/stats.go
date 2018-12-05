@@ -1,4 +1,4 @@
-package main
+package forwarder
 
 import (
 	"log"
@@ -29,10 +29,6 @@ type Stats struct {
 	PacketsForwarded     uint64
 	PacketAttemptsFailed uint64
 	PacketsFailed        uint64
-}
-
-func (server *Server) Stats() Stats {
-	return server.Forwarder().Stats()
 }
 
 func (forwarder *Forwarder) Stats() Stats {
