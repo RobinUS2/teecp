@@ -1,4 +1,4 @@
-package main
+package payloadheader
 
 import (
 	"bytes"
