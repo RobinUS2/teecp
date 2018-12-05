@@ -1,10 +1,9 @@
-package main
+package forwarder
 
 import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/pcap"
 	"log"
-	"net"
 	"strconv"
 )
 
@@ -69,8 +68,7 @@ func (listener *RawListener) handlePacket(packet gopacket.Packet) {
 		p := payload
 		// header
 		if listener.opts.PrefixHeader {
-			packet.TransportLayer().TransportFlow().Src()
-			p.SetHeader(NewPayloadHeader(len(payload.data), net.ParseIP(packet.NetworkLayer().NetworkFlow().Src().String()), strToInt(packet.TransportLayer().TransportFlow().Src().String()), net.ParseIP(packet.NetworkLayer().NetworkFlow().Dst().String()), strToInt(packet.TransportLayer().TransportFlow().Dst().String())))
+			p.SetHeader(PayloadHeaderFromPacket(len(payload.data), packet))
 		}
 		listener.Forwarder().Queue(*p)
 	}

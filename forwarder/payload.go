@@ -1,6 +1,10 @@
-package main
+package forwarder
 
-import "bytes"
+import (
+	"bytes"
+	"github.com/google/gopacket"
+	"net"
+)
 
 type Payload struct {
 	data   []byte
@@ -29,4 +33,8 @@ func NewPayload(payload []byte) Payload {
 
 func (payload *Payload) SetHeader(header PayloadHeader) {
 	payload.header = header
+}
+
+func PayloadHeaderFromPacket(payloadLen int, packet gopacket.Packet) PayloadHeader {
+	return NewPayloadHeader(payloadLen, net.ParseIP(packet.NetworkLayer().NetworkFlow().Src().String()), strToInt(packet.TransportLayer().TransportFlow().Src().String()), net.ParseIP(packet.NetworkLayer().NetworkFlow().Dst().String()), strToInt(packet.TransportLayer().TransportFlow().Dst().String()))
 }
