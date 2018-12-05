@@ -49,11 +49,16 @@ keep alive like this:
 ``` 
 
 ## Build & test
-The application relies upon libpcap (for Windows, [download developer pack](https://www.winpcap.org/devel.htm)) and [GoLang](https://golang.org/doc/install). 
+The application relies upon libpcap (for compiling Windows binaries, [download developer pack](https://www.winpcap.org/devel.htm)) and [GoLang](https://golang.org/doc/install). 
 
-OS X
+OS X via Homebrew
 ```
 brew install libpcap
+```
+
+Ubuntu, Debian via APT
+```
+apt-get install -y libpcap-dev
 ```
 
 Putting it all together
