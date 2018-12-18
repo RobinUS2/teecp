@@ -174,6 +174,23 @@ func TestNewForwarderPrefixHeader(t *testing.T) {
 	<-controls.shutdown
 }
 
+func TestNewForwarderHealth(t *testing.T) {
+	const primaryPort = startPort + 13
+	const teePort = startPort + 14
+	opts := forwarder.NewOpts()
+	opts.Device = testDevice
+	opts.BpfFilter = fmt.Sprintf("port %d and dst %s", primaryPort, host)
+	opts.ParseLayers(forwarder.DefaultLayers)
+	opts.Output = fmt.Sprintf("tcp|%s:%d", host, teePort)
+	opts.Verbose = true
+	opts.StatsPrinter = true
+	opts.StatsHealthCheck = true
+	opts.StatsIntervalMilliseconds = 500
+	controls := runTest(t, opts, primaryPort, teePort, nil)
+	// await
+	<-controls.shutdown
+}
+
 type TestControls struct {
 	shutdown   chan bool
 	conPrimary *net.TCPListener

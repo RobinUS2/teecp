@@ -24,6 +24,7 @@ type Opts struct {
 	QueueSize                 int
 	NumForwarders             int
 	StatsPrinter              bool
+	StatsHealthCheck          bool // true will verify that it keeps sending and os.Exit(1) if nothing send for certain period
 	StatsIntervalMilliseconds int
 	MaxRetries                int
 	Verbose                   bool
