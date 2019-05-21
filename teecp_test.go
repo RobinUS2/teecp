@@ -1,8 +1,8 @@
 package main
 
 import (
-	"./forwarder"
 	"fmt"
+	"github.com/RobinUS2/teecp/forwarder"
 	"log"
 	"net"
 	"strings"

@@ -1,7 +1,7 @@
 package forwarder_test
 
 import (
-	"../forwarder"
+	"github.com/RobinUS2/teecp/forwarder"
 	"log"
 	"net"
 	"testing"

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"./forwarder"
 	"flag"
+	"github.com/RobinUS2/teecp/forwarder"
 	"log"
 )
 
