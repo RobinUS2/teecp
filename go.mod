@@ -3,7 +3,7 @@ module github.com/RobinUS2/teecp
 go 1.12
 
 require (
-	github.com/google/gopacket v0.0.0-20190211013929-f86faeb88894
+	github.com/google/gopacket v1.1.17
 	github.com/pkg/errors v0.8.1
 	golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
 	golang.org/x/net v0.0.0-20190520210107-018c4d40a106
